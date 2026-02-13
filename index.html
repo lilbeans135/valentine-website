@@ -1072,7 +1072,7 @@
 
     <!-- ==================== FOOTER ==================== -->
     <footer>
-        <p>© 2025 Le Petite Lils 🌿</p>
+        <p>© 2025 Le Petite Lils. Crafted with love for Lily & Rohit 🌿</p>
     </footer>
 
     <!-- ==================== CONFIRMATION MODAL ==================== -->
@@ -1081,10 +1081,28 @@
             <h3>Reserved!</h3>
             <p>See you soon at Le Petite Lils</p>
             <div id="reservation-details" style="background: var(--warm-white); padding: 24px; border-radius: 12px; margin: 24px 0; text-align: left; border: 2px solid var(--sage);"></div>
-            <p style="font-size: 0.95em; color: var(--text-light); margin-bottom: 16px;">Copy these details to save the reservation</p>
-            <button class="modal-close" onclick="closeModal()">Perfect</button>
+            <p style="font-size: 0.95em; color: var(--text-light); margin-bottom: 16px;">Reservation details saved - you can view all reservations below</p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="modal-close" onclick="copyReservation()">Copy Details</button>
+                <button class="modal-close" onclick="closeModal()">Close</button>
+            </div>
         </div>
     </div>
+
+    <!-- ==================== RESERVATIONS LOG SECTION ==================== -->
+    <div id="reservations-log" style="position: fixed; bottom: 32px; left: 32px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); max-width: 400px; max-height: 500px; overflow-y: auto; z-index: 9997; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h4 style="font-family: var(--font-serif); color: var(--forest-green); font-size: 1.5em; margin: 0;">All Reservations</h4>
+            <button onclick="toggleReservationsLog()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-light);">×</button>
+        </div>
+        <div id="reservations-list"></div>
+        <button onclick="clearAllReservations()" style="margin-top: 16px; padding: 10px 20px; background: #c94a4a; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-size: 0.9em;">Clear All</button>
+    </div>
+
+    <!-- ==================== VIEW RESERVATIONS BUTTON ==================== -->
+    <button id="view-reservations-btn" onclick="toggleReservationsLog()" style="position: fixed; bottom: 100px; left: 32px; background: var(--forest-green); color: white; padding: 16px 24px; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); z-index: 9996; font-family: var(--font-sans); font-weight: 500; transition: var(--transition);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+        📋 View All Reservations (<span id="reservation-count">0</span>)
+    </button>
 
     <!-- ==================== MUSIC PLAYER ==================== -->
     <div class="music-player">
@@ -1312,6 +1330,81 @@
         // ==================== BOOKING FORM ====================
         const bookingForm = document.getElementById('booking-form');
         const modal = document.getElementById('confirmation-modal');
+        let currentReservationText = '';
+        
+        // Load existing reservations from localStorage
+        function loadReservations() {
+            const saved = localStorage.getItem('allReservations');
+            return saved ? JSON.parse(saved) : [];
+        }
+        
+        // Save reservations to localStorage
+        function saveReservations(reservations) {
+            localStorage.setItem('allReservations', JSON.stringify(reservations));
+            updateReservationCount();
+        }
+        
+        // Update reservation counter
+        function updateReservationCount() {
+            const reservations = loadReservations();
+            document.getElementById('reservation-count').textContent = reservations.length;
+        }
+        
+        // Display all reservations
+        function displayAllReservations() {
+            const reservations = loadReservations();
+            const listDiv = document.getElementById('reservations-list');
+            
+            if (reservations.length === 0) {
+                listDiv.innerHTML = '<p style="color: var(--text-light); text-align: center;">No reservations yet</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = reservations.map((res, index) => `
+                <div style="background: var(--warm-white); padding: 16px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--gold);">
+                    <p style="font-weight: 600; color: var(--forest-green); margin-bottom: 8px;">${res.name}</p>
+                    <p style="font-size: 0.9em; color: var(--text-dark); margin: 4px 0;"><strong>Email:</strong> ${res.email}</p>
+                    <p style="font-size: 0.9em; color: var(--text-dark); margin: 4px 0;"><strong>Date:</strong> ${res.formattedDate}</p>
+                    <p style="font-size: 0.9em; color: var(--text-dark); margin: 4px 0;"><strong>Time:</strong> ${res.formattedTime}</p>
+                    <p style="font-size: 0.9em; color: var(--text-dark); margin: 4px 0;"><strong>Guests:</strong> ${res.partySize}</p>
+                    ${res.notes ? `<p style="font-size: 0.9em; color: var(--text-dark); margin: 4px 0;"><strong>Notes:</strong> ${res.notes}</p>` : ''}
+                    <button onclick="copySpecificReservation(${index})" style="margin-top: 8px; padding: 6px 12px; background: var(--sage); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em;">Copy</button>
+                </div>
+            `).join('');
+        }
+        
+        // Toggle reservations log visibility
+        function toggleReservationsLog() {
+            const log = document.getElementById('reservations-log');
+            if (log.style.display === 'none' || log.style.display === '') {
+                displayAllReservations();
+                log.style.display = 'block';
+            } else {
+                log.style.display = 'none';
+            }
+        }
+        
+        // Clear all reservations
+        function clearAllReservations() {
+            if (confirm('Are you sure you want to clear all reservations?')) {
+                localStorage.removeItem('allReservations');
+                displayAllReservations();
+                updateReservationCount();
+            }
+        }
+        
+        // Copy specific reservation
+        function copySpecificReservation(index) {
+            const reservations = loadReservations();
+            const res = reservations[index];
+            const text = `RESERVATION DETAILS\n\nName: ${res.name}\nEmail: ${res.email}\nDate: ${res.formattedDate}\nTime: ${res.formattedTime}\nParty Size: ${res.partySize} ${res.partySize === '1' ? 'Guest' : 'Guests'}\n${res.notes ? 'Notes: ' + res.notes : ''}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Reservation copied to clipboard!');
+            }).catch(() => {
+                alert('Copy failed. Details:\n\n' + text);
+            });
+        }
         
         bookingForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1323,11 +1416,9 @@
                 date: document.getElementById('date').value,
                 time: document.getElementById('time').value,
                 partySize: document.getElementById('party-size').value,
-                notes: document.getElementById('notes').value
+                notes: document.getElementById('notes').value,
+                timestamp: new Date().toISOString()
             };
-            
-            // Store reservation for calendar
-            sessionStorage.setItem('reservation', JSON.stringify(formData));
             
             // Format date nicely
             const dateObj = new Date(formData.date + 'T00:00:00');
@@ -1345,6 +1436,15 @@
             const displayHour = hour % 12 || 12;
             const formattedTime = `${displayHour}:${minutes} ${ampm}`;
             
+            // Add formatted versions
+            formData.formattedDate = formattedDate;
+            formData.formattedTime = formattedTime;
+            
+            // Save to localStorage
+            const allReservations = loadReservations();
+            allReservations.push(formData);
+            saveReservations(allReservations);
+            
             // Create detailed reservation display
             const detailsHTML = `
                 <div style="line-height: 1.8;">
@@ -1359,22 +1459,34 @@
             
             document.getElementById('reservation-details').innerHTML = detailsHTML;
             
+            // Create text version for copying
+            currentReservationText = `RESERVATION DETAILS\n\nName: ${formData.name}\nEmail: ${formData.email}\nDate: ${formattedDate}\nTime: ${formattedTime}\nParty Size: ${formData.partySize} ${formData.partySize === '1' ? 'Guest' : 'Guests'}\n${formData.notes ? 'Notes: ' + formData.notes : ''}`;
+            
             // Show confirmation modal
             modal.classList.add('show');
             
-            // Optional: Log to console for easy copying
+            // Log to console
             console.log('=== NEW RESERVATION ===');
-            console.log('Name:', formData.name);
-            console.log('Email:', formData.email);
-            console.log('Date:', formattedDate);
-            console.log('Time:', formattedTime);
-            console.log('Party Size:', formData.partySize);
-            console.log('Notes:', formData.notes || 'None');
+            console.log(currentReservationText);
             console.log('======================');
             
             // Reset form
             bookingForm.reset();
         });
+        
+        // Copy current reservation to clipboard
+        function copyReservation() {
+            navigator.clipboard.writeText(currentReservationText).then(() => {
+                alert('Reservation details copied to clipboard!');
+            }).catch(err => {
+                // Fallback if clipboard API fails
+                alert('Copy to clipboard not available. Details are shown in the modal and console (press F12).');
+                console.log('COPY THIS:', currentReservationText);
+            });
+        }
+        
+        // Initialize reservation count on page load
+        updateReservationCount();
         
         function closeModal() {
             modal.classList.remove('show');
